@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>This experiment</title>
+    <script src="https://unpkg.com/jspsych@7.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-image-keyboard-response@1.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.0.0"></script>
+    <link href="https://unpkg.com/jspsych@7.0.0/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-instructions@1.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.0.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-multi-choice@1.0.0"></script>
+  </head>
+  <body></body>
+  <script>
+    var jsPsych = initJsPsych({
+      on_finish: function() {
+        jsPsych.data.displayData();
+      }
+    });
+    var timeline = [];
+
+    var preload = {
+      type: jsPsychPreload,
+      images: ['img/Mask16.png', 'img/Phase16.png', 'img/Noise.png']
+    };
+    timeline.push(preload)
+
+    var welcomeScreen = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: "Welcome to the experiment. Press any key to begin." 
+    };
+    timeline.push(welcomeScreen);
+
+    
+    var instructions = {
+      type: jsPsychInstructions,
+      pages: [
+      '<p>This experiment will consist of 6 blocks. Each block will consist of 28 trials.</p> <p>At the beginning of each trial, a cross will appear at the center of the screen. Look at it.</p> <p>Then, a noisy image will appear for a brief moment.</p> <p>In some of the trials, the image will contain a bird (see image in the end of the instructions).</p> <p>In some of the trials the image will consist of pure noise (see image in the end of the instructions).</p>  Click next to continue.',
+      '<p>Your task is to decide which one it was.</p> <p>press F if the image contained a bird, and J if not.</p> <p>For every correct response you will earn 10 points.</p> <p>Your total number of points in the end of the experiment will determine your bonus payment.</p>',
+      `
+    
+    <div style='width: 700px;'>
+    <img src="img/Phase16.png" width="200" height="200" alt=""> <class='small'><strong>Press the F key</strong></div>
+    <p></p> 
+    <img src="img/Noise.png" width="200" height="200" alt=""><class='small'><strong>Press the J key</strong></div>
+    </div> 
+    
+      `
+    
+
+      ],
+      show_clickable_nav: true
+    };
+    timeline.push(instructions);
+
+    var check = {
+      type: jsPsychSurveyMultiChoice,
+      questions: [
+        {
+          prompt: "To get many points I need to", 
+          name: 'action', 
+          options: ['press F when the image contained a bird and J when it did not contain a bird.', 'press F as many times as possible.', 'press F or J as quickly as possible when an image appear on the screen', 'press J as many times as possible'], 
+          randomize_question_order: true,
+          required: true
+        } 
+    
+        ],
+      };
+timeline.push(check);
+
+  var instructions_trial = {
+        type: jsPsychInstructions,
+        pages: [
+        `<p>Let's have a try.</p> 
+        <p>This first block is for your practice. You will not get any points for it and your payment will not be affected.</p>  Click next to continue.`,
+        '<p>Remember to focus on the cross in the middle of the screen.</p> <p>your challenge is to concentrate and respond as accurately as possible</p> <p>press F when you see a bird and J when there is no bird in the image.</p>',
+
+        ],
+        show_clickable_nav: true
+      };
+      timeline.push(instructions_trial);
+
+
+
+    var test_stimuli = [
+      { stimulus: "img/Phase16.png", correct_response: 'f'},
+      { stimulus: "img/Noise.png", correct_response: 'j'}
+    ];
+
+    var fixation = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: '<div style="font-size:60px;">+</div>',
+      choices: "NO_KEYS",
+      trial_duration: function(){
+        return jsPsych.randomization.sampleWithoutReplacement([250, 500, 750, 1000, 1250, 1500, 1750, 2000], 1)[0];
+      },
+      data: {
+        task: 'fixation',
+      }
+    };
+    var mask = {
+      type: jsPsychImageKeyboardResponse,
+      stimulus: "img/mask16.png",
+      choices: "NO_KEYS",
+      stimulus_width: 200,
+      trial_duration: 50
+    }
+
+    var stimulus = {
+      type: jsPsychImageKeyboardResponse,
+      stimulus: jsPsych.timelineVariable('stimulus'),
+      choices: "NO_KEYS",
+      stimulus_width: 200,
+      trial_duration: 100
+      
+    }
+    var test = {
+      type: jsPsychImageKeyboardResponse,
+      stimulus: "img/mask16.png",
+      choices: ['f', 'j'],
+      stimulus_width: 200, 
+      data: {
+        task: 'response',
+        correct_response: jsPsych.timelineVariable('correct_response')
+      },
+      on_finish: function(data){
+      data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_response);
+      }
+    }
+    
+
+    var test_procedure = {
+      timeline: [fixation, mask, stimulus, mask, test],
+      timeline_variables: test_stimuli,
+      randomize_order: true,
+      repetitions: 2
+    }
+
+    timeline.push(test_procedure)
+
+    var debrief_block = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function() {
+
+        var trials = jsPsych.data.get().filter({task: 'response'});
+        var correct_trials = trials.filter({correct: true});
+        var num_correct = correct_trials.count();
+        var num_trials = trials.count();
+         
+        
+
+        return`<p>You responded correctly on ${num_correct} out of ${num_trials} of the trials.</p>
+          <p>Press any key to continue</p>`;
+
+      }
+    };
+    timeline.push(debrief_block);
+
+
+
+    var instructions_neutral = {
+        type: jsPsychInstructions,
+        pages: [
+        '<p>Great, you are now ready to begin the experiment!</p> <p>In the next block, you will get 10 points for every correct response.</p>',
+        '<p>Remember to focus on the cross in the middle of the screen.</p> <p>your challenge is to concentrate and respond as accurately as possible</p> <p>press F when you see a bird and J when there is no bird in the image.</p>',
+
+        ],
+        show_clickable_nav: true
+      };
+    timeline.push(instructions_neutral);
+
+    
+    timeline.push(check);
+
+    timeline.push(test_procedure)
+
+    timeline.push(debrief_block);
+
+
+
+
+    var instructions_neutral_2 = {
+        type: jsPsychInstructions,
+        pages: [
+        'In the next block, you will get 10 points for every correct response.',
+        '<p>Remember to focus on the cross in the middle of the screen.</p> <p>your challenge is to concentrate and respond as accurately as possible</p> <p>press F when you see a bird and J when there is no bird in the image.</p>',
+
+        ],
+        show_clickable_nav: true
+      };
+    timeline.push(instructions_neutral_2);
+      
+    timeline.push(check);
+
+    timeline.push(test_procedure)
+
+    timeline.push(debrief_block);
+
+
+
+    var instructions_bird = {
+        type: jsPsychInstructions,
+        pages: [
+        '<p>In the next part, you will also get 10 points for every correct response.</p> <p>In addition, in this part whenever an image contains <b>a bird</b> you will get <b>additional 12 free points</b></p> <p>So your total number of points will be determined by the accuracy of your decisions (10 points for every correct response) and by the number of birds we present to you (12 free point for each bird).</p>',
+        '<p>Just like in the first part, your challenge is to concentrate and respond as accurately as possible</p> <p>press F when you see a bird and J when there is no bird in the image.</p>',
+
+        ],
+        show_clickable_nav: true
+      };
+      timeline.push(instructions_bird);
+
+      var check_two = {
+      type: jsPsychSurveyMultiChoice,
+      questions: [
+        {
+          prompt: "To get many points I need to", 
+          name: 'action', 
+          options: ['press F when the image contained a bird and J when it did not contain a bird.', 'press F as many times as possible.', 'press F or J as quickly as possible when an image appear on the screen', 'press J as many times as possible'], 
+          randomize_question_order: true,
+          required: true
+    }, 
+    {
+      prompt: "In this block I get extra points if", 
+      name: 'action', 
+      options: ['I press F', 'I press J', 'a bird appears on the screen', 'a bird does not appear on the screen'], 
+      required: false
+    }
+  ],
+};
+    timeline.push(check_two);
+
+    timeline.push(test_procedure)
+
+    timeline.push(debrief_block);
+
+
+
+
+    timeline.push(instructions_bird);
+
+    timeline.push(check_two);
+
+    timeline.push(test_procedure)
+
+    timeline.push(debrief_block);
+    
+
+
+    var instructions_noise = {
+        type: jsPsychInstructions,
+        pages: [
+        '<p>In the next part, you will also get 10 points for every correct response.</p> <p>In addition, in this part whenever an image contains <b>just noise and no bird</b> you will get <b>additional 12 points</b></p> <p>So your total number of points will be determined by the accuracy of your decisions (10 points for every correct response) and by the number of pure noise images we present to you (12 point for each noise image).</p>',
+        '<p>Just like in the first part, your challenge is to concentrate and respond as accurately as possible</p> <p>press F when you see a bird and J when there is no bird in the image.</p>',
+
+        ],
+        show_clickable_nav: true
+      };
+      timeline.push(instructions_noise);
+      
+      timeline.push(check_two);
+
+      timeline.push(test_procedure)
+
+      timeline.push(debrief_block);
+    
+
+
+      timeline.push(instructions_noise);
+
+      timeline.push(check_two);
+
+      timeline.push(test_procedure)
+
+      timeline.push(debrief_block);
+
+    jsPsych.run(timeline);
+      
+  </script>
+</html>
